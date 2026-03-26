@@ -1,106 +1,76 @@
 import json
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models import EmailConfig
-from app.schemas import EmailConfigUpdate, EmailConfigResponse
+from app.schemas import EmailConfigUpdate
+from app.services.emailer import encrypt_password, send_summary_email
 
 router = APIRouter(prefix="/api/email", tags=["email"])
 
 
-@router.get("", response_model=EmailConfigResponse | None)
+@router.get("")
 def get_email_config(db: Session = Depends(get_db)):
     config = db.query(EmailConfig).first()
     if not config:
         return None
-
-    recipients = json.loads(config.recipients_json)
-    return EmailConfigResponse(
-        id=config.id,
-        smtp_host=config.smtp_host,
-        smtp_port=config.smtp_port,
-        smtp_user=config.smtp_user,
-        smtp_password=config.smtp_password,
-        sender_email=config.sender_email,
-        recipients=recipients,
-        is_active=config.is_active,
-    )
-
-
-@router.put("", response_model=EmailConfigResponse)
-def upsert_email_config(
-    payload: EmailConfigUpdate, db: Session = Depends(get_db)
-):
     from app.main import settings
-    from app.services.emailer import encrypt_password
+    from app.services.emailer import decrypt_password
+    try:
+        real_key = decrypt_password(config.resend_api_key, settings.ENCRYPTION_KEY)
+        masked = real_key[:4] + "****" + real_key[-4:] if len(real_key) > 8 else "******"
+    except Exception:
+        masked = "******"
+    return {
+        "id": config.id,
+        "resend_api_key": masked,
+        "sender_email": config.sender_email,
+        "recipients": json.loads(config.recipients_json),
+        "is_active": config.is_active,
+    }
 
+
+@router.put("")
+def update_email_config(data: EmailConfigUpdate, db: Session = Depends(get_db)):
+    from app.main import settings
     config = db.query(EmailConfig).first()
-    encrypted = encrypt_password(payload.smtp_password, settings.ENCRYPTION_KEY)
-
+    encrypted_key = encrypt_password(data.resend_api_key, settings.ENCRYPTION_KEY)
     if config:
-        config.smtp_host = payload.smtp_host
-        config.smtp_port = payload.smtp_port
-        config.smtp_user = payload.smtp_user
-        config.smtp_password = encrypted
-        config.sender_email = payload.sender_email
-        config.recipients_json = json.dumps(payload.recipients)
-        config.is_active = payload.is_active
+        config.resend_api_key = encrypted_key
+        config.sender_email = data.sender_email
+        config.recipients_json = json.dumps(data.recipients)
+        config.is_active = data.is_active
     else:
         config = EmailConfig(
-            smtp_host=payload.smtp_host,
-            smtp_port=payload.smtp_port,
-            smtp_user=payload.smtp_user,
-            smtp_password=encrypted,
-            sender_email=payload.sender_email,
-            recipients_json=json.dumps(payload.recipients),
-            is_active=payload.is_active,
+            resend_api_key=encrypted_key,
+            sender_email=data.sender_email,
+            recipients_json=json.dumps(data.recipients),
+            is_active=data.is_active,
         )
         db.add(config)
-
     db.commit()
-    db.refresh(config)
-
-    recipients = json.loads(config.recipients_json)
-    return EmailConfigResponse(
-        id=config.id,
-        smtp_host=config.smtp_host,
-        smtp_port=config.smtp_port,
-        smtp_user=config.smtp_user,
-        smtp_password=config.smtp_password,
-        sender_email=config.sender_email,
-        recipients=recipients,
-        is_active=config.is_active,
-    )
+    return {"status": "updated"}
 
 
-@router.post("/test", status_code=200)
-def test_email(db: Session = Depends(get_db)):
+@router.post("/test")
+def send_test_email(db: Session = Depends(get_db)):
     from app.main import settings
-    from app.services.emailer import decrypt_password, send_summary_email
-
+    from app.services.emailer import decrypt_password
     config = db.query(EmailConfig).first()
     if not config:
-        raise HTTPException(status_code=404, detail="No email config found")
-
-    try:
-        recipients = json.loads(config.recipients_json)
-        password = decrypt_password(config.smtp_password, settings.ENCRYPTION_KEY)
-        send_summary_email(
-            smtp_host=config.smtp_host,
-            smtp_port=config.smtp_port,
-            smtp_user=config.smtp_user,
-            smtp_password=password,
-            sender_email=config.sender_email,
-            recipients=recipients,
-            video_title="Test Video",
-            channel_name="Test Channel",
-            summary_text="This is a test email from YT Summarizer.",
-            video_url="https://youtube.com/watch?v=test",
-            pdf_path="",
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Email test failed: {e}")
-
-    return {"detail": "Test email sent successfully"}
+        raise HTTPException(status_code=400, detail="Email not configured")
+    recipients = json.loads(config.recipients_json)
+    if not recipients:
+        raise HTTPException(status_code=400, detail="No recipients configured")
+    api_key = decrypt_password(config.resend_api_key, settings.ENCRYPTION_KEY)
+    send_summary_email(
+        resend_api_key=api_key,
+        sender_email=config.sender_email,
+        recipients=[recipients[0]],
+        video_title="Test Email",
+        channel_name="YT Summarizer",
+        summary_text="This is a test email from YT Summarizer.",
+        video_url="https://youtube.com",
+        pdf_path="",
+    )
+    return {"status": "test email sent"}

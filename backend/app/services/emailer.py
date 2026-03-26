@@ -1,9 +1,7 @@
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
+import resend
 from pathlib import Path
 from cryptography.fernet import Fernet
+import base64
 
 
 def encrypt_password(plain: str, key: str) -> str:
@@ -17,10 +15,7 @@ def decrypt_password(cipher: str, key: str) -> str:
 
 
 def send_summary_email(
-    smtp_host: str,
-    smtp_port: int,
-    smtp_user: str,
-    smtp_password: str,
+    resend_api_key: str,
     sender_email: str,
     recipients: list[str],
     video_title: str,
@@ -28,13 +23,9 @@ def send_summary_email(
     summary_text: str,
     video_url: str,
     pdf_path: str,
+    **kwargs,  # Accept and ignore legacy SMTP params
 ) -> None:
-    subject = f"[YT Summary] {video_title} — {channel_name}"
-
-    msg = MIMEMultipart()
-    msg["From"] = sender_email
-    msg["To"] = ", ".join(recipients)
-    msg["Subject"] = subject
+    resend.api_key = resend_api_key
 
     body = f"""New video summary available!
 
@@ -47,17 +38,24 @@ Summary:
 
 Full timestamped summary attached as PDF.
 """
-    msg.attach(MIMEText(body, "plain"))
 
-    # Attach PDF
+    params = {
+        "from": sender_email,
+        "to": recipients,
+        "subject": f"[YT Summary] {video_title} — {channel_name}",
+        "text": body,
+    }
+
+    # Attach PDF if it exists
     pdf_file = Path(pdf_path)
     if pdf_file.exists():
         with open(pdf_file, "rb") as f:
-            attachment = MIMEApplication(f.read(), _subtype="pdf")
-            attachment.add_header("Content-Disposition", "attachment", filename=pdf_file.name)
-            msg.attach(attachment)
+            pdf_data = f.read()
+        params["attachments"] = [
+            {
+                "filename": pdf_file.name,
+                "content": list(pdf_data),
+            }
+        ]
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.send_message(msg)
+    resend.Emails.send(params)

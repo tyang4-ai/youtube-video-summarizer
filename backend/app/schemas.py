@@ -49,10 +49,7 @@ class SummaryResponse(BaseModel):
 
 
 class EmailConfigUpdate(BaseModel):
-    smtp_host: str
-    smtp_port: int
-    smtp_user: str
-    smtp_password: str
+    resend_api_key: str
     sender_email: str
     recipients: list[str]
     is_active: bool = True
@@ -60,17 +57,16 @@ class EmailConfigUpdate(BaseModel):
 
 class EmailConfigResponse(BaseModel):
     id: int
-    smtp_host: str
-    smtp_port: int
-    smtp_user: str
-    smtp_password: str = ""
+    resend_api_key: str = ""
     sender_email: str
     recipients: list[str]
     is_active: bool
 
-    @field_validator("smtp_password", mode="before")
+    @field_validator("resend_api_key", mode="before")
     @classmethod
-    def mask_password(cls, v):
+    def mask_key(cls, v):
+        if v and len(v) > 8:
+            return v[:4] + "****" + v[-4:]
         return "******"
 
 

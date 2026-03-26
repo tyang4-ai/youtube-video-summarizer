@@ -42,11 +42,8 @@ class Summary(Base):
 class EmailConfig(Base):
     __tablename__ = "email_config"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    smtp_host = Column(String, nullable=False)
-    smtp_port = Column(Integer, nullable=False)
-    smtp_user = Column(String, nullable=False)
-    smtp_password = Column(String, nullable=False)
-    sender_email = Column(String, nullable=False)
+    resend_api_key = Column(String, nullable=False)  # encrypted
+    sender_email = Column(String, nullable=False, default="onboarding@resend.dev")
     recipients_json = Column(Text, nullable=False)
     is_active = Column(Boolean, default=True)
 

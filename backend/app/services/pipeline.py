@@ -133,12 +133,9 @@ def send_email_for_video(video, channel, summary, result, db, settings):
 
     try:
         recipients = json.loads(email_config.recipients_json)
-        password = decrypt_password(email_config.smtp_password, settings.ENCRYPTION_KEY)
+        api_key = decrypt_password(email_config.resend_api_key, settings.ENCRYPTION_KEY)
         send_summary_email(
-            smtp_host=email_config.smtp_host,
-            smtp_port=email_config.smtp_port,
-            smtp_user=email_config.smtp_user,
-            smtp_password=password,
+            resend_api_key=api_key,
             sender_email=email_config.sender_email,
             recipients=recipients,
             video_title=video.title,

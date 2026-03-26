@@ -31,10 +31,7 @@ export interface SummaryDetail {
 
 export interface EmailConfig {
   id: number;
-  smtp_host: string;
-  smtp_port: number;
-  smtp_user: string;
-  smtp_password: string;
+  resend_api_key: string;
   sender_email: string;
   recipients: string[];
   is_active: boolean;

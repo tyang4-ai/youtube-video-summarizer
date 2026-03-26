@@ -5,13 +5,10 @@ import { getLLMConfig, updateLLMConfig } from '../api/llm';
 
 const defaultEmailConfig: EmailConfig = {
   id: 0,
-  smtp_host: '',
-  smtp_port: 587,
-  smtp_user: '',
-  smtp_password: '',
-  sender_email: '',
+  resend_api_key: '',
+  sender_email: 'onboarding@resend.dev',
   recipients: [],
-  is_active: false,
+  is_active: true,
 };
 
 const defaultLLMConfig: LLMConfig = {
@@ -246,45 +243,13 @@ export default function Settings() {
 
         <form onSubmit={handleEmailSave}>
           <div className="form-group">
-            <label htmlFor="smtp-host">SMTP Host</label>
+            <label htmlFor="resend-api-key">Resend API Key</label>
             <input
-              id="smtp-host"
-              type="text"
-              value={emailConfig.smtp_host}
-              onChange={(e) => handleEmailChange('smtp_host', e.target.value)}
-              placeholder="smtp.gmail.com"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="smtp-port">SMTP Port</label>
-            <input
-              id="smtp-port"
-              type="number"
-              value={emailConfig.smtp_port}
-              onChange={(e) => handleEmailChange('smtp_port', Number(e.target.value))}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="smtp-user">SMTP User</label>
-            <input
-              id="smtp-user"
-              type="text"
-              value={emailConfig.smtp_user}
-              onChange={(e) => handleEmailChange('smtp_user', e.target.value)}
-              placeholder="user@gmail.com"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="smtp-password">SMTP Password</label>
-            <input
-              id="smtp-password"
+              id="resend-api-key"
               type="password"
-              value={emailConfig.smtp_password}
-              onChange={(e) => handleEmailChange('smtp_password', e.target.value)}
-              placeholder="App password"
+              value={emailConfig.resend_api_key}
+              onChange={(e) => handleEmailChange('resend_api_key', e.target.value)}
+              placeholder="re_..."
             />
           </div>
 
@@ -295,7 +260,7 @@ export default function Settings() {
               type="email"
               value={emailConfig.sender_email}
               onChange={(e) => handleEmailChange('sender_email', e.target.value)}
-              placeholder="noreply@example.com"
+              placeholder="onboarding@resend.dev"
             />
           </div>
 
