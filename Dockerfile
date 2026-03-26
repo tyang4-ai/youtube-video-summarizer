@@ -21,6 +21,10 @@ COPY --from=frontend-build /app/frontend/dist ./app/static/
 # Create data directory
 RUN mkdir -p /data/pdfs
 
+# Copy and set up start script
+COPY start.sh ./
+RUN chmod +x start.sh
+
 ENV PORT=8000
 EXPOSE 8000
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
+CMD ["/app/start.sh"]
