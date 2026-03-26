@@ -9,3 +9,7 @@ dist/
 .superpowers/
 backend/app/static/
 .claude/
+cli/config.txt
+cli/seen_videos.json
+cli/pdfs/
+cli/.venv/

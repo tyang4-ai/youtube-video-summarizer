@@ -16,7 +16,10 @@ MODEL=
 # Email Settings (using Resend - get free key at resend.com)
 RESEND_API_KEY=
 SENDER_EMAIL=onboarding@resend.dev
-RECIPIENTS=email1@example.com, email2@example.com
+RECIPIENTS=email1@example.com
+
+# YouTube Data API Key (for channel polling - get from console.cloud.google.com)
+YOUTUBE_API_KEY=
 
 # PDF output directory
 PDF_DIR=./pdfs
