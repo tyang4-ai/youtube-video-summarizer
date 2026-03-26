@@ -75,16 +75,18 @@ class EmailConfigResponse(BaseModel):
 
 
 class LLMConfigUpdate(BaseModel):
+    provider_type: str = "groq"  # "groq" or "claude"
     api_key: str
-    base_url: str
+    base_url: str = ""
     model_name: str
     system_prompt: str
 
 
 class LLMConfigResponse(BaseModel):
     id: int
+    provider_type: str = "groq"
     api_key: str = ""
-    base_url: str
+    base_url: str = ""
     model_name: str
     system_prompt: str
 

@@ -62,14 +62,22 @@ def _process_video(video: Video, channel: Channel, db: Session, settings, provid
     llm_config = db.query(LLMConfig).first()
     if llm_config:
         from app.services.emailer import decrypt_password
-        from app.services.llm.grok_provider import GrokProvider
         real_key = decrypt_password(llm_config.api_key, settings.ENCRYPTION_KEY)
-        active_provider = GrokProvider(
-            api_key=real_key,
-            base_url=llm_config.base_url,
-            model=llm_config.model_name,
-            system_prompt=llm_config.system_prompt,
-        )
+        if llm_config.provider_type == "claude":
+            from app.services.llm.claude_provider import ClaudeProvider
+            active_provider = ClaudeProvider(
+                api_key=real_key,
+                model=llm_config.model_name,
+                system_prompt=llm_config.system_prompt,
+            )
+        else:
+            from app.services.llm.grok_provider import GrokProvider
+            active_provider = GrokProvider(
+                api_key=real_key,
+                base_url=llm_config.base_url,
+                model=llm_config.model_name,
+                system_prompt=llm_config.system_prompt,
+            )
     else:
         active_provider = provider
 

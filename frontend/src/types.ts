@@ -42,6 +42,7 @@ export interface EmailConfig {
 
 export interface LLMConfig {
   id: number;
+  provider_type: string;
   api_key: string;
   base_url: string;
   model_name: string;

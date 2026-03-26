@@ -16,6 +16,7 @@ const defaultEmailConfig: EmailConfig = {
 
 const defaultLLMConfig: LLMConfig = {
   id: 0,
+  provider_type: 'groq',
   api_key: '',
   base_url: 'https://api.groq.com/openai/v1',
   model_name: 'llama-3.3-70b-versatile',
@@ -150,26 +151,48 @@ export default function Settings() {
 
         <form onSubmit={handleLLMSave}>
           <div className="form-group">
+            <label htmlFor="llm-provider">Provider</label>
+            <select
+              id="llm-provider"
+              value={llmConfig.provider_type}
+              onChange={(e) => {
+                const provider = e.target.value;
+                setLlmConfig((prev) => ({
+                  ...prev,
+                  provider_type: provider,
+                  base_url: provider === 'groq' ? 'https://api.groq.com/openai/v1' : '',
+                  model_name: provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-sonnet-4-20250514',
+                }));
+              }}
+            >
+              <option value="groq">Groq (Llama)</option>
+              <option value="claude">Claude (Anthropic)</option>
+            </select>
+          </div>
+
+          <div className="form-group">
             <label htmlFor="llm-api-key">API Key</label>
             <input
               id="llm-api-key"
               type="password"
               value={llmConfig.api_key}
               onChange={(e) => handleLLMChange('api_key', e.target.value)}
-              placeholder="Your API key"
+              placeholder={llmConfig.provider_type === 'claude' ? 'sk-ant-...' : 'gsk_...'}
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="llm-base-url">Base URL</label>
-            <input
-              id="llm-base-url"
-              type="text"
-              value={llmConfig.base_url}
-              onChange={(e) => handleLLMChange('base_url', e.target.value)}
-              placeholder="https://api.groq.com/openai/v1"
-            />
-          </div>
+          {llmConfig.provider_type === 'groq' && (
+            <div className="form-group">
+              <label htmlFor="llm-base-url">Base URL</label>
+              <input
+                id="llm-base-url"
+                type="text"
+                value={llmConfig.base_url}
+                onChange={(e) => handleLLMChange('base_url', e.target.value)}
+                placeholder="https://api.groq.com/openai/v1"
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="llm-model-name">Model Name</label>
@@ -178,7 +201,7 @@ export default function Settings() {
               type="text"
               value={llmConfig.model_name}
               onChange={(e) => handleLLMChange('model_name', e.target.value)}
-              placeholder="llama-3.3-70b-versatile"
+              placeholder={llmConfig.provider_type === 'claude' ? 'claude-sonnet-4-20250514' : 'llama-3.3-70b-versatile'}
             />
           </div>
 

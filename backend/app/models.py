@@ -54,8 +54,9 @@ class EmailConfig(Base):
 class LLMConfig(Base):
     __tablename__ = "llm_config"
     id = Column(Integer, primary_key=True, autoincrement=True)
+    provider_type = Column(String, default="groq", nullable=False)  # "groq" or "claude"
     api_key = Column(String, nullable=False)
-    base_url = Column(String, nullable=False)
+    base_url = Column(String, nullable=True)  # Only used for groq/OpenAI-compatible
     model_name = Column(String, nullable=False)
     system_prompt = Column(Text, nullable=False)
 
