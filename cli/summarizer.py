@@ -43,23 +43,105 @@ def save_seen_videos(seen, path="seen_videos.json"):
 
 # --- Channel Resolution ---
 
-def resolve_channel_id(url_or_id):
+def resolve_channel_id(url_or_id, api_key=None):
     url_or_id = url_or_id.strip()
+
+    # Raw channel ID
     if re.match(r"^UC[\w-]{22}$", url_or_id):
-        return url_or_id, url_or_id
+        name = _get_channel_name(url_or_id, api_key) or url_or_id
+        return url_or_id, name
+
+    # /channel/UCxxxx URL
     m = re.search(r"youtube\.com/channel/(UC[\w-]{22})", url_or_id)
     if m:
-        return m.group(1), m.group(1)
-    if re.search(r"youtube\.com/(@[\w.-]+|c/[\w.-]+)", url_or_id):
+        cid = m.group(1)
+        name = _get_channel_name(cid, api_key) or cid
+        return cid, name
+
+    # /@handle or /c/name — extract the handle, then verify via API
+    handle_match = re.search(r"youtube\.com/(@[\w.-]+|c/[\w.-]+)", url_or_id)
+    if handle_match:
+        handle = handle_match.group(1)
+        expected_name = handle.lstrip("@").replace("c/", "")
+
+        # Method 1: Use YouTube API forHandle (most reliable)
+        if api_key:
+            try:
+                resp = httpx.get(f"{YOUTUBE_API_URL}/channels", params={
+                    "key": api_key, "forHandle": expected_name, "part": "snippet"
+                }, timeout=15)
+                items = resp.json().get("items", [])
+                if items:
+                    cid = items[0]["id"]
+                    name = items[0]["snippet"]["title"]
+                    return cid, name
+            except Exception:
+                pass
+
+            # Method 2: forHandle didn't work (handle may have been redirected)
+            # Search for the channel by name
+            found = _search_channel(expected_name, api_key)
+            if found:
+                return found
+
+        # Method 3: Fallback to page scraping
         resp = httpx.get(url_or_id, follow_redirects=True,
                          headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
         resp.raise_for_status()
         m = re.search(r'"channelId":"(UC[\w-]+)"', resp.text)
         if m:
             name_match = re.search(r'<meta property="og:title" content="([^"]+)"', resp.text)
-            name = name_match.group(1) if name_match else m.group(1)
-            return m.group(1), name
+            scraped_name = name_match.group(1) if name_match else expected_name
+            return m.group(1), scraped_name
+
+    # Method 4: Treat input as a channel name and search for it
+    if api_key:
+        found = _search_channel(url_or_id, api_key)
+        if found:
+            return found
+
     raise ValueError(f"Cannot resolve channel from: {url_or_id}")
+
+
+def _names_match(expected, actual):
+    """Check if channel names roughly match (case-insensitive, ignore spaces)."""
+    e = re.sub(r'[\s_-]', '', expected).lower()
+    a = re.sub(r'[\s_-]', '', actual).lower()
+    return e in a or a in e
+
+
+def _get_channel_name(channel_id, api_key=None):
+    """Look up a channel's name via the YouTube API."""
+    if not api_key:
+        return None
+    try:
+        resp = httpx.get(f"{YOUTUBE_API_URL}/channels", params={
+            "key": api_key, "id": channel_id, "part": "snippet"
+        }, timeout=15)
+        items = resp.json().get("items", [])
+        if items:
+            return items[0]["snippet"]["title"]
+    except Exception:
+        pass
+    return None
+
+
+def _search_channel(name, api_key):
+    """Search YouTube for a channel by name, return (channel_id, channel_name) or None."""
+    try:
+        resp = httpx.get(f"{YOUTUBE_API_URL}/search", params={
+            "key": api_key, "q": name, "type": "channel",
+            "part": "snippet", "maxResults": 5,
+        }, timeout=15)
+        for item in resp.json().get("items", []):
+            title = item["snippet"]["title"]
+            cid = item["id"]["channelId"]
+            if _names_match(name, title):
+                print(f"  Found: {title} ({cid})")
+                return cid, title
+    except Exception:
+        pass
+    return None
 
 # --- YouTube API ---
 
@@ -473,7 +555,7 @@ def main():
     for channel_input in channels:
         print(f"\n{'─' * 50}")
         try:
-            channel_id, channel_name = resolve_channel_id(channel_input)
+            channel_id, channel_name = resolve_channel_id(channel_input, youtube_api_key)
             print(f"Channel: {channel_name} ({channel_id})")
         except Exception as e:
             print(f"SKIP: Cannot resolve '{channel_input}': {e}")
