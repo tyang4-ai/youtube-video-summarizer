@@ -1,6 +1,6 @@
 from app.services.llm.base import LLMProvider
 
-DEFAULT_MAX_TOKENS = 120000  # Conservative for Grok's 131K window
+DEFAULT_MAX_TOKENS = 8000  # Conservative for Groq free tier (12K limit minus room for prompt + response)
 
 
 def summarize_transcript(
