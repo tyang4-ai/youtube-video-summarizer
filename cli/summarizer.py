@@ -474,13 +474,18 @@ def main():
         print(f"\n{'─' * 50}")
         try:
             channel_id, channel_name = resolve_channel_id(channel_input)
-            print(f"Channel: {channel_name}")
+            print(f"Channel: {channel_name} ({channel_id})")
         except Exception as e:
             print(f"SKIP: Cannot resolve '{channel_input}': {e}")
             continue
 
         try:
             videos = fetch_latest_videos(channel_id, youtube_api_key, max_results=2, channel_name=channel_name)
+            # Warn if videos come from a different channel than expected
+            if videos and videos[0].get("channel_name") and videos[0]["channel_name"] != channel_name:
+                actual = videos[0]["channel_name"]
+                print(f"  WARNING: @handle resolved to '{actual}' instead of '{channel_name}'")
+                print(f"  TIP: Use the channel ID directly in channels.txt: {channel_id}")
             print(f"  Checking latest {len(videos)} videos...")
         except Exception as e:
             print(f"  SKIP: Cannot fetch videos: {e}")
