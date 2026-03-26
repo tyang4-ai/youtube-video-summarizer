@@ -204,6 +204,18 @@ def summarize(transcript, video_title, config):
 
 # --- PDF Generation (one per channel, multiple videos) ---
 
+def _timestamp_to_seconds(ts):
+    """Convert M:SS or MM:SS to total seconds."""
+    try:
+        parts = ts.strip().split(":")
+        if len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+        elif len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+    except (ValueError, IndexError):
+        pass
+    return 0
+
 def generate_channel_pdf(channel_name, video_summaries, output_dir="./pdfs"):
     """Generate a single PDF with all video summaries for a channel."""
     from reportlab.lib.pagesizes import letter
@@ -263,7 +275,10 @@ def generate_channel_pdf(channel_name, video_summaries, output_dir="./pdfs"):
                 ts = sec.get("timestamp", "")
                 stitle = sec.get("title", "")
                 desc = sec.get("description", "")
-                elements.append(Paragraph(f"<b>{esc(ts)} — {esc(stitle)}</b>", section_style))
+                # Convert timestamp to seconds for YouTube link
+                ts_seconds = _timestamp_to_seconds(ts)
+                ts_url = f"{url}&t={ts_seconds}" if ts_seconds > 0 else url
+                elements.append(Paragraph(f"<b><link href='{ts_url}'>{esc(ts)}</link> — {esc(stitle)}</b>", section_style))
                 elements.append(Paragraph(esc(desc), styles['BodyText']))
 
     # Footer
