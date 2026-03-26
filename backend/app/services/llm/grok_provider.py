@@ -11,13 +11,13 @@ Identify natural topic boundaries. Output ONLY valid JSON, no markdown."""
 
 class GrokProvider(LLMProvider):
     def __init__(self, api_key: str):
-        self.client = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
+        self.client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
 
     def summarize(self, transcript: str, video_title: str) -> dict:
         max_retries = 3
         for attempt in range(max_retries):
             resp = self.client.chat.completions.create(
-                model="grok-3",
+                model="llama-3.3-70b-versatile",
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": f"Video title: {video_title}\n\nTranscript:\n{transcript}"},

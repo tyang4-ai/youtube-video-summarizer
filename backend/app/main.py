@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings
-from app.database import init_db, SessionLocal
+from app import database
+from app.database import init_db
 from app.services.scheduler import create_scheduler, startup_register_all
 from app.services.llm.factory import get_provider
 
@@ -29,9 +30,9 @@ async def lifespan(app: FastAPI):
     provider = get_provider(settings)
     scheduler = create_scheduler()
 
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
-        startup_register_all(scheduler, db, SessionLocal, settings, provider)
+        startup_register_all(scheduler, db, database.SessionLocal, settings, provider)
     finally:
         db.close()
 

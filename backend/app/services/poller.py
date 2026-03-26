@@ -1,21 +1,45 @@
 from datetime import datetime
-import feedparser
+import logging
+import yt_dlp
 
-YOUTUBE_RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+logger = logging.getLogger(__name__)
+
+CHANNEL_URL = "https://www.youtube.com/channel/{channel_id}/videos"
 
 
 def poll_channel(channel_id: str, known_video_ids: set[str]) -> list[dict]:
-    url = YOUTUBE_RSS_URL.format(channel_id=channel_id)
-    feed = feedparser.parse(url)
+    url = CHANNEL_URL.format(channel_id=channel_id)
+    ydl_opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "extract_flat": True,
+        "playlistend": 5,  # Only check last 5 videos
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception as e:
+        logger.error(f"Failed to fetch channel {channel_id}: {e}")
+        return []
+
+    if not info or "entries" not in info:
+        return []
+
     new_videos = []
-    for entry in feed.entries:
-        video_id = entry.get("yt_videoid", "")
+    for entry in info["entries"]:
+        if entry is None:
+            continue
+        video_id = entry.get("id", "")
         if video_id and video_id not in known_video_ids:
-            published = entry.get("published", "")
-            try:
-                pub_dt = datetime.fromisoformat(published)
-            except (ValueError, AttributeError):
-                pub_dt = None
+            # Try to parse upload date
+            upload_date = entry.get("upload_date", "")
+            pub_dt = None
+            if upload_date:
+                try:
+                    pub_dt = datetime.strptime(upload_date, "%Y%m%d")
+                except ValueError:
+                    pass
             new_videos.append({
                 "video_id": video_id,
                 "title": entry.get("title", "Untitled"),
