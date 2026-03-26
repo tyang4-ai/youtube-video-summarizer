@@ -1,8 +1,11 @@
 import json
 import logging
+import os
 import yt_dlp
 
 logger = logging.getLogger(__name__)
+
+COOKIES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "cookies.txt")
 
 
 class TranscriptUnavailableError(Exception):
@@ -20,6 +23,8 @@ def get_transcript(video_id: str) -> str:
         "subtitleslangs": ["en"],
         "subtitlesformat": "json3",
     }
+    if os.path.isfile(COOKIES_FILE):
+        ydl_opts["cookiefile"] = COOKIES_FILE
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

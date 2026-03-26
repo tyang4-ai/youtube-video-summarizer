@@ -1,10 +1,12 @@
 from datetime import datetime
 import logging
+import os
 import yt_dlp
 
 logger = logging.getLogger(__name__)
 
 CHANNEL_URL = "https://www.youtube.com/channel/{channel_id}/videos"
+COOKIES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "cookies.txt")
 
 
 def poll_channel(channel_id: str, known_video_ids: set[str]) -> list[dict]:
@@ -15,6 +17,8 @@ def poll_channel(channel_id: str, known_video_ids: set[str]) -> list[dict]:
         "extract_flat": True,
         "playlistend": 5,  # Only check last 5 videos
     }
+    if os.path.isfile(COOKIES_FILE):
+        ydl_opts["cookiefile"] = COOKIES_FILE
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
