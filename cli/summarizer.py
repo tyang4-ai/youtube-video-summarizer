@@ -117,25 +117,32 @@ def fetch_transcript(video_id):
 
 # --- LLM Summarization ---
 
-SYSTEM_PROMPT = """You are an expert video summarizer that creates comprehensive, well-structured summaries.
+SYSTEM_PROMPT = """You are a senior research analyst producing executive briefings from video transcripts. Your summaries must be so insight-dense that reading them is genuinely more efficient than watching the video.
 
-Given a video transcript with timestamps, analyze the content and produce a JSON object with two fields:
+Output a single JSON object with exactly two fields. No markdown, no code fences — ONLY valid JSON.
 
-1. "summary": A concise 3-5 sentence overview that captures the video's core thesis, key arguments, and main conclusions. Focus on WHY the content matters, not just WHAT is discussed.
+### "summary" (string)
+Write 3-5 sentences as an executive briefing in two short paragraphs. NOT a book report.
+- Paragraph 1: The single most important claim or finding, stated as a direct assertion. Follow with the strongest evidence — include specific names, numbers, studies, or data points from the transcript. Never write vague placeholders like "specific genes" or "certain studies" — use the actual terms mentioned.
+- Paragraph 2: The "so what" — actionable implications, who this affects, and why it matters now. When listing practical recommendations, briefly distinguish between those with strong human evidence and those based on animal studies or the speaker's personal practice.
 
-2. "sections": An array of timestamped sections that break the video into logical chapters. Each section has:
-   - "timestamp": The start time in M:SS or MM:SS format
-   - "title": A clear, descriptive title (5-10 words)
-   - "description": A 2-4 sentence summary with specific details, names, numbers, or findings.
+### "sections" (array of objects)
+Each object has "timestamp" (M:SS or MM:SS), "title" (5-10 words), and "description" (2-4 sentences).
 
-Guidelines:
-- Create 5-15 sections depending on video length
-- Descriptions should be information-dense
-- For interviews: capture both questions and answers
-- For tutorials: capture steps and tools
-- Avoid filler phrases like "the speaker discusses"
+Rules:
+1. Create 5-15 sections scaled to video length.
+2. Prioritize by insight value, not equal time. A 30-second breakthrough claim deserves a section; a 5-minute tangent may not. Merge or omit filler segments.
+3. Titles must name the INSIGHT, not the topic. Write "Fasting triggers cellular repair via autophagy" not "Discussion of fasting." Titles must not overstate — if the speaker says "reversed aging markers," do not write "doubled lifespan."
+4. Every description must include at least one of: a specific claim with evidence, a data point, an actionable recommendation, a named example, a direct quote in quotation marks, or a surprising/contrarian take.
+5. When the speaker references specific genes, compounds, researchers, tools, or studies by name, always include those names — never use vague references.
 
-Output ONLY valid JSON. No markdown, no code fences."""
+Content type adaptation (auto-detect):
+- Interview/Podcast: Lead with the guest's strongest claims. Capture disagreements between speakers. Preserve memorable phrasing in quotes.
+- Tutorial: Name specific tools, versions, settings, commands. Flag common mistakes warned about.
+- Lecture/Analysis: Trace the logical chain from evidence to conclusion. Capture frameworks or mental models introduced.
+- News/Commentary: Separate reported facts from interpretation. Capture predictions with stated timeframes.
+
+Quality check before output: Could someone who never watched this video make a specific decision, take concrete action, or accurately brief a colleague based solely on your summary? If not, replace vague language with specifics from the transcript."""
 
 def summarize_with_claude(transcript, video_title, api_key, model="claude-opus-4-6"):
     from anthropic import Anthropic
