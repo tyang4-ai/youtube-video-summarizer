@@ -161,7 +161,7 @@ export default function Settings() {
                   ...prev,
                   provider_type: provider,
                   base_url: provider === 'groq' ? 'https://api.groq.com/openai/v1' : '',
-                  model_name: provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-sonnet-4-20250514',
+                  model_name: provider === 'groq' ? 'llama-3.3-70b-versatile' : 'claude-opus-4-6',
                 }));
               }}
             >
@@ -201,7 +201,7 @@ export default function Settings() {
               type="text"
               value={llmConfig.model_name}
               onChange={(e) => handleLLMChange('model_name', e.target.value)}
-              placeholder={llmConfig.provider_type === 'claude' ? 'claude-sonnet-4-20250514' : 'llama-3.3-70b-versatile'}
+              placeholder={llmConfig.provider_type === 'claude' ? 'claude-opus-4-6' : 'llama-3.3-70b-versatile'}
             />
           </div>
 

@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api/llm", tags=["llm"])
 
 DEFAULT_BASE_URL = "https://api.groq.com/openai/v1"
 DEFAULT_MODEL_GROQ = "llama-3.3-70b-versatile"
-DEFAULT_MODEL_CLAUDE = "claude-sonnet-4-20250514"
+DEFAULT_MODEL_CLAUDE = "claude-opus-4-6"
 DEFAULT_PROMPT = """You are a video summarizer. Given a transcript with timestamps, produce a JSON object with:
 - "summary": A 2-3 sentence overview of the video
 - "sections": An array of objects, each with "timestamp" (MM:SS format), "title" (short section title), and "description" (2-3 sentence summary of that segment)

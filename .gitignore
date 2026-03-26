@@ -8,3 +8,4 @@ dist/
 .venv/
 .superpowers/
 backend/app/static/
+.claude/

@@ -10,7 +10,7 @@ Identify natural topic boundaries. Output ONLY valid JSON, no markdown."""
 
 
 class ClaudeProvider(LLMProvider):
-    def __init__(self, api_key: str, model: str = "claude-sonnet-4-20250514", system_prompt: str = None):
+    def __init__(self, api_key: str, model: str = "claude-opus-4-6", system_prompt: str = None):
         self.client = Anthropic(api_key=api_key)
         self.model = model
         self.system_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
