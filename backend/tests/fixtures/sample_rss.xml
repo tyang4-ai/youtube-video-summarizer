@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+  <title>Test Channel</title>
+  <entry>
+    <yt:videoId>vid001</yt:videoId>
+    <title>First Video</title>
+    <published>2026-03-20T10:00:00+00:00</published>
+  </entry>
+  <entry>
+    <yt:videoId>vid002</yt:videoId>
+    <title>Second Video</title>
+    <published>2026-03-19T10:00:00+00:00</published>
+  </entry>
+  <entry>
+    <yt:videoId>vid003</yt:videoId>
+    <title>Third Video</title>
+    <published>2026-03-18T10:00:00+00:00</published>
+  </entry>
+</feed>
