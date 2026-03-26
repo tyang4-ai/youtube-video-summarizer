@@ -3,7 +3,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Channels from './pages/Channels';
 import Summaries from './pages/Summaries';
-import EmailSettings from './pages/EmailSettings';
+import Settings from './pages/Settings';
 
 export default function App() {
   return (
@@ -13,7 +13,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/channels" element={<Channels />} />
           <Route path="/summaries" element={<Summaries />} />
-          <Route path="/email" element={<EmailSettings />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>

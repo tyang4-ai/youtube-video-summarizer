@@ -4,7 +4,7 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/channels', label: 'Channels', icon: '📡' },
   { to: '/summaries', label: 'Summaries', icon: '📄' },
-  { to: '/email', label: 'Email Settings', icon: '📧' },
+  { to: '/settings', label: 'Settings', icon: '⚙️' },
 ];
 
 export default function Sidebar() {

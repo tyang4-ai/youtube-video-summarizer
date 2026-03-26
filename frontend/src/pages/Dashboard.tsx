@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { DashboardData, ActivityItem } from '../types.ts';
-import { getDashboard, getActivity } from '../api/dashboard.ts';
-import StatsCard from '../components/StatsCard.tsx';
-import StatusBadge from '../components/StatusBadge.tsx';
+import type { DashboardData } from '../types';
+import { getDashboard } from '../api/dashboard';
+import StatsCard from '../components/StatsCard';
+import StatusBadge from '../components/StatusBadge';
 
 function timeAgo(dateStr: string): string {
   const now = Date.now();
@@ -17,18 +17,24 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export default function Dashboard() {
-  const [stats, setStats] = useState<DashboardData | null>(null);
-  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     async function load() {
       try {
-        const [dashData, actData] = await Promise.all([getDashboard(), getActivity()]);
-        setStats(dashData);
-        setActivity(actData);
+        const dashData = await getDashboard();
+        setData(dashData);
       } catch {
         setError('Failed to load dashboard data');
       } finally {
@@ -46,38 +52,40 @@ export default function Dashboard() {
       <h1>Dashboard</h1>
 
       <div className="stats-row">
-        <StatsCard label="Channels" value={stats?.channel_count ?? 0} />
-        <StatsCard label="Videos Processed" value={stats?.videos_processed ?? 0} />
-        <StatsCard label="Emails Sent" value={stats?.emails_sent ?? 0} />
-        <StatsCard label="Next Poll" value={stats?.next_poll_time ?? 'N/A'} />
+        <StatsCard label="Channels" value={data?.channel_count ?? 0} />
+        <StatsCard label="Videos Processed" value={data?.videos_processed ?? 0} />
+        <StatsCard label="Emails Sent" value={data?.emails_sent ?? 0} />
       </div>
 
-      <h2>Recent Activity</h2>
-      {activity.length === 0 ? (
-        <p className="empty-state">No activity yet.</p>
+      <h2>Monitored Channels</h2>
+
+      {(!data?.channels || data.channels.length === 0) ? (
+        <p className="empty-state">No channels added yet.</p>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>Video</th>
-              <th>Channel</th>
-              <th>Action</th>
-              <th>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activity.map((item) => (
-              <tr key={item.id}>
-                <td><StatusBadge status={item.status} /></td>
-                <td>{item.video_title ?? '-'}</td>
-                <td>{item.channel_name ?? '-'}</td>
-                <td>{item.action}</td>
-                <td>{timeAgo(item.created_at)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        data.channels.map((channel) => (
+          <div key={channel.id} className="channel-card">
+            <div className="channel-card-header">
+              <h3>{channel.name}</h3>
+              <StatusBadge status={channel.is_active ? 'active' : 'paused'} />
+            </div>
+            <div className="channel-card-meta">
+              Last checked: {channel.last_polled_at ? timeAgo(channel.last_polled_at) : 'Never'}
+            </div>
+            {channel.videos.length === 0 ? (
+              <p className="empty-state" style={{ padding: '8px 0' }}>No videos yet.</p>
+            ) : (
+              channel.videos.map((video) => (
+                <div key={video.id} className="video-list-item">
+                  <StatusBadge status={video.status} />
+                  <span className="video-title">{video.title}</span>
+                  <span className="video-date">
+                    {video.published_at ? formatDate(video.published_at) : ''}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        ))
       )}
     </div>
   );

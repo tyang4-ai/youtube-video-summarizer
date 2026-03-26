@@ -367,3 +367,56 @@ h2 { font-size: 18px; margin-bottom: 16px; }
   text-align: center;
   font-size: 14px;
 }
+
+/* Channel Card */
+.channel-card {
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.channel-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.channel-card-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.channel-card-meta {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 12px;
+}
+.video-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid #1f1f35;
+  font-size: 14px;
+}
+.video-list-item .video-title {
+  flex: 1;
+}
+.video-list-item .video-date {
+  color: #666;
+  font-size: 12px;
+}
+
+/* Settings Section */
+.settings-section {
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.settings-section h2 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 18px;
+}

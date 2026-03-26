@@ -40,19 +40,32 @@ export interface EmailConfig {
   is_active: boolean;
 }
 
+export interface LLMConfig {
+  id: number;
+  api_key: string;
+  base_url: string;
+  model_name: string;
+  system_prompt: string;
+}
+
 export interface DashboardData {
   channel_count: number;
   videos_processed: number;
   emails_sent: number;
-  next_poll_time: string | null;
+  channels: DashboardChannel[];
 }
 
-export interface ActivityItem {
+export interface DashboardChannel {
   id: number;
-  action: string;
+  name: string;
+  is_active: boolean;
+  last_polled_at: string | null;
+  videos: DashboardVideo[];
+}
+
+export interface DashboardVideo {
+  id: number;
+  title: string;
   status: string;
-  error_message: string | null;
-  video_title: string | null;
-  channel_name: string | null;
-  created_at: string;
+  published_at: string | null;
 }
