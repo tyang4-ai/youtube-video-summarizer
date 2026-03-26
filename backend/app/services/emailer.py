@@ -47,8 +47,8 @@ Full timestamped summary attached as PDF.
     }
 
     # Attach PDF if it exists
-    pdf_file = Path(pdf_path)
-    if pdf_file.exists():
+    pdf_file = Path(pdf_path) if pdf_path else None
+    if pdf_file and pdf_file.is_file():
         with open(pdf_file, "rb") as f:
             pdf_data = f.read()
         params["attachments"] = [
