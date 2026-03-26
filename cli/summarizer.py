@@ -545,6 +545,7 @@ def main():
         return
 
     youtube_api_key = config.get("YOUTUBE_API_KEY", "").strip() or None
+    videos_to_check = int(config.get("VIDEOS_TO_CHECK", "2"))
     pdf_dir = config.get("PDF_DIR", "./pdfs").strip()
 
     all_results = {}  # channel_name -> list of {title, url, result}
@@ -562,7 +563,7 @@ def main():
             continue
 
         try:
-            videos = fetch_latest_videos(channel_id, youtube_api_key, max_results=2, channel_name=channel_name)
+            videos = fetch_latest_videos(channel_id, youtube_api_key, max_results=videos_to_check, channel_name=channel_name)
             # Warn if videos come from a different channel than expected
             if videos and videos[0].get("channel_name") and videos[0]["channel_name"] != channel_name:
                 actual = videos[0]["channel_name"]

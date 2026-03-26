@@ -21,5 +21,8 @@ RECIPIENTS=email1@example.com
 # YouTube Data API Key (for channel polling - get from console.cloud.google.com)
 YOUTUBE_API_KEY=
 
+# Number of latest videos to check per channel (default: 2)
+VIDEOS_TO_CHECK=2
+
 # PDF output directory
 PDF_DIR=./pdfs
