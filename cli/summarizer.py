@@ -144,17 +144,31 @@ Content type adaptation (auto-detect):
 
 Quality check before output: Could someone who never watched this video make a specific decision, take concrete action, or accurately brief a colleague based solely on your summary? If not, replace vague language with specifics from the transcript."""
 
+def parse_json_response(text):
+    """Parse JSON from LLM response, stripping markdown fences if present."""
+    text = text.strip()
+    # Strip markdown code fences
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*\n?", "", text)
+        text = re.sub(r"\n?```\s*$", "", text)
+    return json.loads(text)
+
 def summarize_with_claude(transcript, video_title, api_key, model="claude-opus-4-6"):
     from anthropic import Anthropic
     client = Anthropic(api_key=api_key)
     max_chars = 400000
     if len(transcript) > max_chars:
         transcript = transcript[:max_chars] + "\n[transcript truncated]"
-    resp = client.messages.create(
-        model=model, max_tokens=4096, system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": f"Video title: {video_title}\n\nTranscript:\n{transcript}"}],
-    )
-    return json.loads(resp.content[0].text)
+    for attempt in range(3):
+        resp = client.messages.create(
+            model=model, max_tokens=4096, system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"Video title: {video_title}\n\nTranscript:\n{transcript}"}],
+        )
+        try:
+            return parse_json_response(resp.content[0].text)
+        except json.JSONDecodeError:
+            if attempt == 2:
+                raise ValueError(f"Failed to parse JSON after 3 attempts. Raw response: {resp.content[0].text[:300]}")
 
 def summarize_with_groq(transcript, video_title, api_key, model="llama-3.3-70b-versatile"):
     from openai import OpenAI
@@ -170,7 +184,7 @@ def summarize_with_groq(transcript, video_title, api_key, model="llama-3.3-70b-v
         ],
         response_format={"type": "json_object"},
     )
-    return json.loads(resp.choices[0].message.content)
+    return parse_json_response(resp.choices[0].message.content)
 
 def summarize(transcript, video_title, config):
     provider = config.get("LLM_PROVIDER", "claude").lower()
