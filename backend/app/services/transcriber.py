@@ -1,11 +1,10 @@
-import json
 import logging
 import os
-import yt_dlp
+import httpx
 
 logger = logging.getLogger(__name__)
 
-COOKIES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "cookies.txt")
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 
 
 class TranscriptUnavailableError(Exception):
@@ -13,50 +12,63 @@ class TranscriptUnavailableError(Exception):
 
 
 def get_transcript(video_id: str) -> str:
-    url = f"https://www.youtube.com/watch?v={video_id}"
-    ydl_opts = {
-        "quiet": True,
-        "no_warnings": True,
-        "skip_download": True,
-        "writesubtitles": True,
-        "writeautomaticsub": True,
-        "subtitleslangs": ["en"],
-        "subtitlesformat": "json3",
-    }
-    if os.path.isfile(COOKIES_FILE):
-        ydl_opts["cookiefile"] = COOKIES_FILE
+    """Fetch transcript using YouTube's timedtext API directly."""
+    # First, get the video page to find caption tracks
+    try:
+        resp = httpx.get(
+            f"https://www.youtube.com/watch?v={video_id}",
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+            follow_redirects=True,
+            timeout=30,
+        )
+        resp.raise_for_status()
+        page = resp.text
+    except Exception as e:
+        raise TranscriptUnavailableError(f"Failed to fetch video page for {video_id}: {e}")
+
+    # Extract captions URL from the page
+    import re
+    import json
+
+    # Find the captions data in the page source
+    caption_match = re.search(r'"captions":\s*(\{.*?"playerCaptionsTracklistRenderer".*?\})\s*,\s*"videoDetails"', page)
+    if not caption_match:
+        raise TranscriptUnavailableError(f"No captions found for {video_id}")
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-    except Exception as e:
-        raise TranscriptUnavailableError(f"Failed to fetch video info for {video_id}: {e}")
+        captions_data = json.loads(caption_match.group(1))
+        tracks = captions_data.get("playerCaptionsTracklistRenderer", {}).get("captionTracks", [])
+    except (json.JSONDecodeError, KeyError):
+        raise TranscriptUnavailableError(f"Failed to parse captions data for {video_id}")
 
-    # Try manual subtitles first, then auto-generated
-    subtitles = info.get("subtitles", {})
-    auto_subs = info.get("automatic_captions", {})
+    if not tracks:
+        raise TranscriptUnavailableError(f"No caption tracks for {video_id}")
 
-    sub_data = None
-    for subs in [subtitles, auto_subs]:
-        if "en" in subs:
-            for fmt in subs["en"]:
-                if fmt.get("ext") == "json3":
-                    sub_data = fmt
-                    break
-            if sub_data:
+    # Find English track (prefer manual over auto-generated)
+    selected_track = None
+    for track in tracks:
+        lang = track.get("languageCode", "")
+        if lang == "en":
+            selected_track = track
+            if track.get("kind") != "asr":  # Prefer non-ASR (manual) captions
                 break
 
-    if not sub_data or "url" not in sub_data:
-        raise TranscriptUnavailableError(f"No English subtitles for {video_id}")
+    # Fallback to first available track
+    if not selected_track:
+        selected_track = tracks[0]
 
-    # Fetch the subtitle data
-    import httpx
+    base_url = selected_track.get("baseUrl", "")
+    if not base_url:
+        raise TranscriptUnavailableError(f"No caption URL for {video_id}")
+
+    # Fetch captions as JSON
     try:
-        resp = httpx.get(sub_data["url"], timeout=30)
+        caption_url = f"{base_url}&fmt=json3"
+        resp = httpx.get(caption_url, timeout=30)
         resp.raise_for_status()
         caption_data = resp.json()
     except Exception as e:
-        raise TranscriptUnavailableError(f"Failed to download subtitles for {video_id}: {e}")
+        raise TranscriptUnavailableError(f"Failed to download captions for {video_id}: {e}")
 
     # Parse json3 format into timestamped text
     events = caption_data.get("events", [])

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./data/yt_summarizer.db"
     PDF_DIR: str = "./data/pdfs"
     ENCRYPTION_KEY: str = ""
+    YOUTUBE_API_KEY: str = ""
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
