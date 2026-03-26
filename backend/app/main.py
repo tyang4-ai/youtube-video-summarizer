@@ -3,9 +3,10 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.config import Settings
 from app import database
@@ -75,12 +76,21 @@ def health_check():
     return {"status": "ok"}
 
 
-# Mount static files for production frontend build
-# In Railway deployment, build.sh copies frontend into app/static/
-# In local dev, frontend/dist is used directly
+# Serve frontend static files with SPA fallback
 static_dir = os.path.join(os.path.dirname(__file__), "static")
-frontend_build = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
-if os.path.isdir(static_dir):
-    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
-elif frontend_build.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_build), html=True), name="static")
+frontend_build = str(Path(__file__).resolve().parent.parent.parent / "frontend" / "dist")
+_static_dir = static_dir if os.path.isdir(static_dir) else (frontend_build if os.path.isdir(frontend_build) else None)
+
+if _static_dir:
+    # Serve static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=os.path.join(_static_dir, "assets")), name="assets")
+
+    # SPA catch-all: serve index.html for any non-API route
+    @app.get("/{full_path:path}")
+    async def serve_spa(request: Request, full_path: str):
+        # If the file exists in static dir, serve it
+        file_path = os.path.join(_static_dir, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # Otherwise serve index.html for client-side routing
+        return FileResponse(os.path.join(_static_dir, "index.html"))
