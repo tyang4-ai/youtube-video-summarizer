@@ -1,0 +1,22 @@
+# YouTube Video Summarizer - Settings
+# Fill in your credentials below
+
+# LLM Provider: "groq" or "claude"
+LLM_PROVIDER=claude
+
+# API Keys (fill in the one matching your provider)
+GROQ_API_KEY=
+ANTHROPIC_API_KEY=
+
+# LLM Model (leave blank for default)
+# Groq default: llama-3.3-70b-versatile
+# Claude default: claude-opus-4-6
+MODEL=
+
+# Email Settings (using Resend - get free key at resend.com)
+RESEND_API_KEY=
+SENDER_EMAIL=onboarding@resend.dev
+RECIPIENTS=email1@example.com, email2@example.com
+
+# PDF output directory
+PDF_DIR=./pdfs

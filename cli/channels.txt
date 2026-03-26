@@ -1,0 +1,8 @@
+# YouTube Channels to Monitor
+# Add one channel URL or ID per line
+# Lines starting with # are ignored
+#
+# Examples:
+# https://www.youtube.com/channel/UCsBjURrPoezykLs9EqgamOA
+# https://www.youtube.com/@TheDiaryOfACEO
+# UCHnyfMqiRRG1u-2MsSQLbXA
