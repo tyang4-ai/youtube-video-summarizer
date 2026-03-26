@@ -51,6 +51,15 @@ class EmailConfig(Base):
     is_active = Column(Boolean, default=True)
 
 
+class LLMConfig(Base):
+    __tablename__ = "llm_config"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    api_key = Column(String, nullable=False)
+    base_url = Column(String, nullable=False)
+    model_name = Column(String, nullable=False)
+    system_prompt = Column(Text, nullable=False)
+
+
 class JobLog(Base):
     __tablename__ = "job_log"
     id = Column(Integer, primary_key=True, autoincrement=True)

@@ -57,9 +57,25 @@ def _process_video(video: Video, channel: Channel, db: Session, settings, provid
         log_job(db, "transcribe", "failed", channel_id=channel.id, video_id=video.id, error=str(e))
         return
 
+    # Check for DB-configured LLM settings
+    from app.models import LLMConfig
+    llm_config = db.query(LLMConfig).first()
+    if llm_config:
+        from app.services.emailer import decrypt_password
+        from app.services.llm.grok_provider import GrokProvider
+        real_key = decrypt_password(llm_config.api_key, settings.ENCRYPTION_KEY)
+        active_provider = GrokProvider(
+            api_key=real_key,
+            base_url=llm_config.base_url,
+            model=llm_config.model_name,
+            system_prompt=llm_config.system_prompt,
+        )
+    else:
+        active_provider = provider
+
     # Summarize
     try:
-        result = summarize_transcript(transcript, video.title, provider)
+        result = summarize_transcript(transcript, video.title, active_provider)
         log_job(db, "summarize", "success", channel_id=channel.id, video_id=video.id)
     except Exception as e:
         video.status = "failed"

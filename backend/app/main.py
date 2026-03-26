@@ -61,11 +61,13 @@ from app.api.channels import router as channels_router
 from app.api.summaries import router as summaries_router
 from app.api.email import router as email_router
 from app.api.dashboard import router as dashboard_router
+from app.api.llm_settings import router as llm_settings_router
 
 app.include_router(channels_router)
 app.include_router(summaries_router)
 app.include_router(email_router)
 app.include_router(dashboard_router)
+app.include_router(llm_settings_router)
 
 
 @app.get("/api/health")

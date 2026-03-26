@@ -74,6 +74,28 @@ class EmailConfigResponse(BaseModel):
         return "******"
 
 
+class LLMConfigUpdate(BaseModel):
+    api_key: str
+    base_url: str
+    model_name: str
+    system_prompt: str
+
+
+class LLMConfigResponse(BaseModel):
+    id: int
+    api_key: str = ""
+    base_url: str
+    model_name: str
+    system_prompt: str
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def mask_api_key(cls, v):
+        if v and len(v) > 8:
+            return v[:4] + "****" + v[-4:]
+        return "******"
+
+
 class DashboardResponse(BaseModel):
     channel_count: int
     videos_processed: int

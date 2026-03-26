@@ -9,7 +9,7 @@ from app.schemas import DashboardResponse, ActivityItem
 router = APIRouter(prefix="/api", tags=["dashboard"])
 
 
-@router.get("/dashboard", response_model=DashboardResponse)
+@router.get("/dashboard")
 def get_dashboard(db: Session = Depends(get_db)):
     channel_count = db.query(func.count(Channel.id)).scalar() or 0
     videos_processed = (
@@ -24,11 +24,33 @@ def get_dashboard(db: Session = Depends(get_db)):
         .scalar()
         or 0
     )
-    return DashboardResponse(
-        channel_count=channel_count,
-        videos_processed=videos_processed,
-        emails_sent=emails_sent,
-    )
+
+    channels = db.query(Channel).all()
+    channel_data = []
+    for ch in channels:
+        videos = db.query(Video).filter_by(channel_fk=ch.id).order_by(Video.created_at.desc()).limit(5).all()
+        channel_data.append({
+            "id": ch.id,
+            "name": ch.name,
+            "is_active": ch.is_active,
+            "last_polled_at": ch.last_polled_at.isoformat() if ch.last_polled_at else None,
+            "videos": [
+                {
+                    "id": v.id,
+                    "title": v.title,
+                    "status": v.status,
+                    "published_at": v.published_at.isoformat() if v.published_at else None,
+                }
+                for v in videos
+            ],
+        })
+
+    return {
+        "channel_count": channel_count,
+        "videos_processed": videos_processed,
+        "emails_sent": emails_sent,
+        "channels": channel_data,
+    }
 
 
 @router.get("/activity", response_model=list[ActivityItem])
