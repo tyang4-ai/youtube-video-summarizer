@@ -7,3 +7,4 @@ node_modules/
 dist/
 .venv/
 .superpowers/
+backend/app/static/

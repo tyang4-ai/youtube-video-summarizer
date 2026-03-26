@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -72,6 +73,11 @@ def health_check():
 
 
 # Mount static files for production frontend build
+# In Railway deployment, build.sh copies frontend into app/static/
+# In local dev, frontend/dist is used directly
+static_dir = os.path.join(os.path.dirname(__file__), "static")
 frontend_build = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
-if frontend_build.exists():
+if os.path.isdir(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+elif frontend_build.exists():
     app.mount("/", StaticFiles(directory=str(frontend_build), html=True), name="static")
