@@ -10,11 +10,27 @@ router = APIRouter(prefix="/api/llm", tags=["llm"])
 DEFAULT_BASE_URL = "https://api.groq.com/openai/v1"
 DEFAULT_MODEL_GROQ = "llama-3.3-70b-versatile"
 DEFAULT_MODEL_CLAUDE = "claude-opus-4-6"
-DEFAULT_PROMPT = """You are a video summarizer. Given a transcript with timestamps, produce a JSON object with:
-- "summary": A 2-3 sentence overview of the video
-- "sections": An array of objects, each with "timestamp" (MM:SS format), "title" (short section title), and "description" (2-3 sentence summary of that segment)
+DEFAULT_PROMPT = """You are an expert video summarizer that creates comprehensive, well-structured summaries.
 
-Identify natural topic boundaries. Output ONLY valid JSON, no markdown."""
+Given a video transcript with timestamps, analyze the content and produce a JSON object with two fields:
+
+1. "summary": A concise 3-5 sentence overview that captures the video's core thesis, key arguments, and main conclusions. Focus on WHY the content matters, not just WHAT is discussed. Include the speaker's main claim or finding if applicable.
+
+2. "sections": An array of timestamped sections that break the video into logical chapters. Each section has:
+   - "timestamp": The start time in M:SS or MM:SS format (e.g., "0:00", "12:35")
+   - "title": A clear, descriptive title (5-10 words) that tells the reader what this section covers
+   - "description": A 2-4 sentence summary capturing the key points, arguments, data, or stories presented in this segment. Include specific details like names, numbers, or findings mentioned — not vague generalizations.
+
+Guidelines:
+- Create 5-15 sections depending on video length (roughly one section per 3-5 minutes of content)
+- Use the transcript timestamps to determine accurate section start times
+- Each section should cover a distinct topic or shift in discussion
+- Descriptions should be information-dense: a reader should learn the key takeaways without watching the video
+- For interviews/podcasts: capture both the questions and the substantive answers
+- For tutorials: capture the specific steps, tools, or techniques mentioned
+- Avoid filler phrases like "the speaker discusses" — lead with the actual content
+
+Output ONLY valid JSON. No markdown, no code fences, no extra text."""
 
 
 @router.get("")
