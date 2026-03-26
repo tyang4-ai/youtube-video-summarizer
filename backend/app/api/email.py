@@ -63,14 +63,17 @@ def send_test_email(db: Session = Depends(get_db)):
     if not recipients:
         raise HTTPException(status_code=400, detail="No recipients configured")
     api_key = decrypt_password(config.resend_api_key, settings.ENCRYPTION_KEY)
-    send_summary_email(
-        resend_api_key=api_key,
-        sender_email=config.sender_email,
-        recipients=[recipients[0]],
-        video_title="Test Email",
-        channel_name="YT Summarizer",
-        summary_text="This is a test email from YT Summarizer.",
-        video_url="https://youtube.com",
-        pdf_path="",
-    )
+    try:
+        send_summary_email(
+            resend_api_key=api_key,
+            sender_email=config.sender_email,
+            recipients=[recipients[0]],
+            video_title="Test Email",
+            channel_name="YT Summarizer",
+            summary_text="This is a test email from YT Summarizer.",
+            video_url="https://youtube.com",
+            pdf_path="",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return {"status": "test email sent"}
