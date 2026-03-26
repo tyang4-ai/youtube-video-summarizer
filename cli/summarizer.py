@@ -65,23 +65,26 @@ def resolve_channel_id(url_or_id):
 
 YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3"
 
-def fetch_latest_videos(channel_id, api_key=None, max_results=2):
+def fetch_latest_videos(channel_id, api_key=None, max_results=2, channel_name=""):
     if api_key:
+        # Use playlistItems API with the channel's uploads playlist (UC -> UU)
+        # This returns ONLY videos from this specific channel
+        uploads_playlist = "UU" + channel_id[2:]
         params = {
-            "key": api_key, "channelId": channel_id, "part": "snippet",
-            "order": "date", "maxResults": max_results, "type": "video",
+            "key": api_key, "playlistId": uploads_playlist, "part": "snippet",
+            "maxResults": max_results,
         }
-        resp = httpx.get(f"{YOUTUBE_API_URL}/search", params=params, timeout=30)
+        resp = httpx.get(f"{YOUTUBE_API_URL}/playlistItems", params=params, timeout=30)
         resp.raise_for_status()
         videos = []
         for item in resp.json().get("items", []):
-            vid_id = item.get("id", {}).get("videoId", "")
             snippet = item.get("snippet", {})
+            vid_id = snippet.get("resourceId", {}).get("videoId", "")
             if vid_id:
                 videos.append({
                     "video_id": vid_id, "title": snippet.get("title", "Untitled"),
                     "published_at": snippet.get("publishedAt", ""),
-                    "channel_name": snippet.get("channelTitle", channel_id),
+                    "channel_name": snippet.get("channelTitle", channel_name or channel_id),
                 })
         return videos
     else:
@@ -205,7 +208,7 @@ def summarize(transcript, video_title, config):
 # --- PDF Generation (one per channel, multiple videos) ---
 
 def _timestamp_to_seconds(ts):
-    """Convert M:SS or MM:SS to total seconds."""
+    """Convert M:SS, MM:SS, or H:MM:SS to total seconds."""
     try:
         parts = ts.strip().split(":")
         if len(parts) == 2:
@@ -216,13 +219,21 @@ def _timestamp_to_seconds(ts):
         pass
     return 0
 
+def _seconds_to_display(seconds):
+    """Convert total seconds to a human-readable duration like '~18 min'."""
+    if seconds < 60:
+        return f"~{seconds} sec"
+    minutes = round(seconds / 60)
+    return f"~{minutes} min"
+
 def generate_channel_pdf(channel_name, video_summaries, output_dir="./pdfs"):
-    """Generate a single PDF with all video summaries for a channel."""
+    """Generate a visually enhanced PDF with all video summaries for a channel."""
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, HRFlowable
     from reportlab.lib.colors import HexColor
+    from reportlab.lib.enums import TA_LEFT
 
     day_dir = os.path.join(output_dir, datetime.now().strftime('%Y-%m-%d'))
     os.makedirs(day_dir, exist_ok=True)
@@ -236,54 +247,147 @@ def generate_channel_pdf(channel_name, video_summaries, output_dir="./pdfs"):
     def esc(text):
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-    channel_title_style = ParagraphStyle('CT', parent=styles['Heading1'], fontSize=22, spaceAfter=12)
+    # --- Style definitions ---
+    channel_title_style = ParagraphStyle('CT', parent=styles['Heading1'], fontSize=24, spaceAfter=2)
+    channel_sub_style = ParagraphStyle('CSub', parent=styles['Normal'], fontSize=11,
+                                       textColor=HexColor('#555555'), spaceAfter=4)
     video_title_style = ParagraphStyle('VT', parent=styles['Heading1'], fontSize=16, spaceAfter=4)
     meta_style = ParagraphStyle('M', parent=styles['Normal'], fontSize=10, textColor=HexColor('#666666'))
+    stats_style = ParagraphStyle('Stats', parent=styles['Normal'], fontSize=10,
+                                 textColor=HexColor('#888888'), fontName='Helvetica-Oblique', spaceAfter=6)
+    summary_style = ParagraphStyle('SumBody', parent=styles['BodyText'], fontSize=11,
+                                   leading=15, leftIndent=6, rightIndent=6,
+                                   spaceBefore=4, spaceAfter=4)
+    nav_header_style = ParagraphStyle('NavH', parent=styles['Normal'], fontSize=10,
+                                      fontName='Helvetica-Bold', spaceBefore=8, spaceAfter=2)
+    nav_style = ParagraphStyle('Nav', parent=styles['Normal'], fontSize=9,
+                               leading=13, leftIndent=12, textColor=HexColor('#333333'))
     section_style = ParagraphStyle('S', parent=styles['Heading3'], fontSize=12, spaceBefore=10)
     footer_style = ParagraphStyle('F', parent=styles['Normal'], fontSize=8, textColor=HexColor('#999999'))
 
+    # Colors
+    accent_color = HexColor('#2a7ae2')
+    border_color = HexColor('#cccccc')
+    light_bg = HexColor('#f0f0f0')
+    link_color = HexColor('#0066cc')
+
     elements = []
 
-    # Channel header
+    # --- Channel header ---
     elements.append(Paragraph(esc(channel_name), channel_title_style))
-    elements.append(Paragraph(f"Video Summaries — {datetime.now().strftime('%B %d, %Y')}", meta_style))
-    elements.append(Spacer(1, 20))
+    num_videos = len(video_summaries)
+    elements.append(Paragraph(
+        f"{num_videos} video{'s' if num_videos != 1 else ''} summarized \u2014 {datetime.now().strftime('%B %d, %Y')}",
+        channel_sub_style))
+    elements.append(HRFlowable(width="100%", thickness=2, color=accent_color, spaceAfter=16))
 
     for i, vs in enumerate(video_summaries):
         if i > 0:
-            elements.append(PageBreak())
+            elements.append(Spacer(1, 12))
+            elements.append(HRFlowable(width="100%", thickness=1, color=border_color,
+                                       spaceBefore=8, spaceAfter=16))
 
         title = vs["title"]
         url = vs["url"]
         result = vs["result"]
-
-        # Video title
-        elements.append(Paragraph(esc(title), video_title_style))
-        elements.append(Paragraph(f"<link href='{url}'>{esc(url)}</link>", meta_style))
-        elements.append(Spacer(1, 8))
-
-        # Summary
-        elements.append(Paragraph("<b>Summary</b>", styles['Heading2']))
-        elements.append(Paragraph(esc(result.get("summary", "")), styles['BodyText']))
-        elements.append(Spacer(1, 8))
-
-        # Sections
         sections = result.get("sections", [])
+
+        # --- Video title and URL ---
+        elements.append(Paragraph(esc(title), video_title_style))
+        safe_url = url.replace("&", "&amp;")
+        elements.append(Paragraph(
+            f"<link href='{safe_url}'>{esc(url)}</link>", meta_style))
+
+        # --- Quick stats line ---
+        num_sections = len(sections)
         if sections:
+            last_ts = sections[-1].get("timestamp", "0:00")
+            total_secs = _timestamp_to_seconds(last_ts)
+            duration_str = _seconds_to_display(total_secs) if total_secs > 0 else ""
+        else:
+            duration_str = ""
+        stats_parts = [f"{num_sections} section{'s' if num_sections != 1 else ''}"]
+        if duration_str:
+            stats_parts.append(duration_str)
+        elements.append(Paragraph(" | ".join(stats_parts), stats_style))
+        elements.append(Spacer(1, 4))
+
+        # --- Summary highlight box ---
+        summary_text = result.get("summary", "")
+        if summary_text:
+            elements.append(Paragraph("<b>Summary</b>", styles['Heading2']))
+            summary_para = Paragraph(esc(summary_text), summary_style)
+            # Colored left-border box: narrow accent cell + content cell
+            page_width = letter[0] - 2 * 0.75 * inch
+            summary_table = Table(
+                [[None, summary_para]],
+                colWidths=[4, page_width - 4]
+            )
+            summary_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, 0), accent_color),
+                ('BACKGROUND', (1, 0), (1, 0), light_bg),
+                ('LEFTPADDING', (1, 0), (1, 0), 10),
+                ('RIGHTPADDING', (1, 0), (1, 0), 10),
+                ('TOPPADDING', (1, 0), (1, 0), 8),
+                ('BOTTOMPADDING', (1, 0), (1, 0), 8),
+                ('LEFTPADDING', (0, 0), (0, 0), 0),
+                ('RIGHTPADDING', (0, 0), (0, 0), 0),
+                ('TOPPADDING', (0, 0), (0, 0), 0),
+                ('BOTTOMPADDING', (0, 0), (0, 0), 0),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            elements.append(summary_table)
+            elements.append(Spacer(1, 8))
+
+        # --- Divider between summary and timestamps ---
+        if sections:
+            elements.append(HRFlowable(width="100%", thickness=0.5, color=border_color,
+                                       spaceBefore=4, spaceAfter=8))
+
+            # --- Table of Contents (Quick Navigation) ---
+            elements.append(Paragraph("Quick Navigation:", nav_header_style))
+            for sec in sections:
+                ts = sec.get("timestamp", "")
+                stitle = sec.get("title", "")
+                ts_seconds = _timestamp_to_seconds(ts)
+                if ts_seconds > 0:
+                    ts_url = f"https://youtube.com/watch?v={vs['url'].split('v=')[-1]}&amp;t={ts_seconds}"
+                else:
+                    ts_url = safe_url
+                nav_line = (
+                    f"<link href='{ts_url}'>"
+                    f"<font color='#0066cc'><u>{esc(ts)}</u></font></link>"
+                    f"&nbsp;&nbsp;{esc(stitle)}"
+                )
+                elements.append(Paragraph(nav_line, nav_style))
+            elements.append(Spacer(1, 10))
+
+            # --- Detailed Sections ---
             elements.append(Paragraph("<b>Timestamps</b>", styles['Heading2']))
             for sec in sections:
                 ts = sec.get("timestamp", "")
                 stitle = sec.get("title", "")
                 desc = sec.get("description", "")
-                # Convert timestamp to seconds for YouTube link
                 ts_seconds = _timestamp_to_seconds(ts)
-                ts_url = f"{url}&t={ts_seconds}" if ts_seconds > 0 else url
-                elements.append(Paragraph(f"<b><link href='{ts_url}'>{esc(ts)}</link> — {esc(stitle)}</b>", section_style))
+                if ts_seconds > 0:
+                    ts_url = f"https://youtube.com/watch?v={vs['url'].split('v=')[-1]}&amp;t={ts_seconds}"
+                else:
+                    ts_url = safe_url
+                # Timestamp: blue underlined link; title: bold black
+                section_heading = (
+                    f"<link href='{ts_url}'>"
+                    f"<font color='#0066cc'><u>{esc(ts)}</u></font></link>"
+                    f" <b>\u2014 {esc(stitle)}</b>"
+                )
+                elements.append(Paragraph(section_heading, section_style))
                 elements.append(Paragraph(esc(desc), styles['BodyText']))
 
-    # Footer
+    # --- Footer ---
     elements.append(Spacer(1, 24))
-    elements.append(Paragraph(f"Generated by YT Summarizer on {datetime.now().strftime('%Y-%m-%d %H:%M')}", footer_style))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=border_color, spaceAfter=6))
+    elements.append(Paragraph(
+        f"Generated by YT Summarizer on {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        footer_style))
 
     doc.build(elements)
     return filepath
@@ -376,7 +480,7 @@ def main():
             continue
 
         try:
-            videos = fetch_latest_videos(channel_id, youtube_api_key, max_results=2)
+            videos = fetch_latest_videos(channel_id, youtube_api_key, max_results=2, channel_name=channel_name)
             print(f"  Checking latest {len(videos)} videos...")
         except Exception as e:
             print(f"  SKIP: Cannot fetch videos: {e}")

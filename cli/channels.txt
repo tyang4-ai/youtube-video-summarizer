@@ -1,4 +1,4 @@
 # YouTube Channels to Monitor
 # Add one channel URL or ID per line
 
-https://www.youtube.com/@TheDiaryOfACEO
+https://www.youtube.com/@techlinked

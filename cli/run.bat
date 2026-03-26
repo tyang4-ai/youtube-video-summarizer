@@ -11,4 +11,3 @@ if not exist ".venv" (
 )
 
 python summarizer.py
-pause
