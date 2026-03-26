@@ -198,10 +198,11 @@ def generate_channel_pdf(channel_name, video_summaries, output_dir="./pdfs"):
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
     from reportlab.lib.colors import HexColor
 
-    os.makedirs(output_dir, exist_ok=True)
+    day_dir = os.path.join(output_dir, datetime.now().strftime('%Y-%m-%d'))
+    os.makedirs(day_dir, exist_ok=True)
     safe_name = re.sub(r'[^\w\s-]', '', channel_name)[:40].strip()
-    filename = f"{safe_name}_{datetime.now().strftime('%Y%m%d')}.pdf"
-    filepath = os.path.join(output_dir, filename)
+    filename = f"{safe_name}.pdf"
+    filepath = os.path.join(day_dir, filename)
 
     doc = SimpleDocTemplate(filepath, pagesize=letter, topMargin=0.75*inch, bottomMargin=0.75*inch)
     styles = getSampleStyleSheet()
