@@ -225,6 +225,16 @@ def parse_json_response(text):
         text = re.sub(r"\n?```\s*$", "", text)
     return json.loads(text)
 
+def _validate_result(result):
+    """Check that the result has both summary and non-empty sections."""
+    if not isinstance(result, dict):
+        return False
+    if not result.get("summary"):
+        return False
+    if not result.get("sections") or len(result["sections"]) == 0:
+        return False
+    return True
+
 def summarize_with_claude(transcript, video_title, api_key, model="claude-opus-4-6"):
     from anthropic import Anthropic
     client = Anthropic(api_key=api_key)
@@ -232,12 +242,21 @@ def summarize_with_claude(transcript, video_title, api_key, model="claude-opus-4
     if len(transcript) > max_chars:
         transcript = transcript[:max_chars] + "\n[transcript truncated]"
     for attempt in range(3):
+        messages = [{"role": "user", "content": f"Video title: {video_title}\n\nTranscript:\n{transcript}"}]
+        # On retry, add explicit reminder about sections
+        if attempt > 0:
+            messages[0]["content"] += "\n\nIMPORTANT: You MUST include a non-empty \"sections\" array with timestamped chapters. Do not put everything in the summary."
         resp = client.messages.create(
             model=model, max_tokens=4096, system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Video title: {video_title}\n\nTranscript:\n{transcript}"}],
+            messages=messages,
         )
         try:
-            return parse_json_response(resp.content[0].text)
+            result = parse_json_response(resp.content[0].text)
+            if _validate_result(result):
+                return result
+            # Valid JSON but missing sections — retry
+            if attempt == 2:
+                return result  # Return what we have on last attempt
         except json.JSONDecodeError:
             if attempt == 2:
                 raise ValueError(f"Failed to parse JSON after 3 attempts. Raw response: {resp.content[0].text[:300]}")
@@ -248,15 +267,24 @@ def summarize_with_groq(transcript, video_title, api_key, model="llama-3.3-70b-v
     max_chars = 28000
     if len(transcript) > max_chars:
         transcript = transcript[:max_chars] + "\n[transcript truncated]"
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Video title: {video_title}\n\nTranscript:\n{transcript}"},
-        ],
-        response_format={"type": "json_object"},
-    )
-    return parse_json_response(resp.choices[0].message.content)
+    for attempt in range(3):
+        user_content = f"Video title: {video_title}\n\nTranscript:\n{transcript}"
+        if attempt > 0:
+            user_content += "\n\nIMPORTANT: You MUST include a non-empty \"sections\" array with timestamped chapters."
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+        )
+        result = parse_json_response(resp.choices[0].message.content)
+        if _validate_result(result):
+            return result
+        if attempt == 2:
+            return result
+    return result
 
 def summarize(transcript, video_title, config):
     provider = config.get("LLM_PROVIDER", "claude").lower()
