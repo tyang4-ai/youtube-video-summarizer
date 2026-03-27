@@ -203,10 +203,11 @@ def fetch_transcript(video_id):
 # --- LLM Summarization ---
 
 def load_system_prompt(path="prompt.txt"):
-    """Load system prompt from prompt.txt. Falls back to a basic default if file is missing."""
+    """Load system prompt from prompt.txt. Lines starting with ## are stripped. Falls back to a basic default if file is missing."""
     if os.path.exists(path):
         with open(path) as f:
-            return f.read().strip()
+            lines = [line for line in f if not line.startswith("##")]
+            return "\n".join(lines).strip()
     return "You are a video summarizer. Given a transcript, produce a JSON object with \"summary\" (string) and \"sections\" (array of {timestamp, title, description}). Output ONLY valid JSON."
 
 SYSTEM_PROMPT = load_system_prompt()

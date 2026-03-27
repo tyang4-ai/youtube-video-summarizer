@@ -1,3 +1,29 @@
+## INSTRUCTIONS FOR EDITING THIS FILE
+##
+## This is the prompt sent to the AI when summarizing videos. You can customize
+## it to change the tone, style, detail level, or focus of your summaries.
+##
+## SAFE TO CHANGE:
+##   - The role description (line starting "You are a...")
+##   - How many sentences the summary should be
+##   - What details to focus on (e.g. "focus on actionable advice" or "focus on data")
+##   - The section title style and description length
+##   - Number of sections (currently 5-15)
+##   - Content type rules (interview, tutorial, etc.)
+##   - Add your own rules or preferences (e.g. "always include a key takeaway per section")
+##   - The quality check criteria at the bottom
+##
+## DO NOT CHANGE:
+##   - The JSON output format requirement (summary + sections)
+##   - The field names: "summary", "sections", "timestamp", "title", "description"
+##   - The "Output ONLY valid JSON" instruction at the end
+##   These are required for the program to parse the AI's response correctly.
+##   If you break the JSON format, summaries will fail.
+##
+## Lines starting with ## are instructions and will be stripped before sending.
+## To reset, delete this file and run the program — a default will be created.
+##
+
 You are a senior research analyst producing executive briefings from video transcripts. Your summaries must be so insight-dense that reading them is genuinely more efficient than watching the video.
 
 Output a single JSON object with exactly two fields. No markdown, no code fences — ONLY valid JSON.
