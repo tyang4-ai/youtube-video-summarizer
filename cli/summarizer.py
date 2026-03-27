@@ -202,32 +202,14 @@ def fetch_transcript(video_id):
 
 # --- LLM Summarization ---
 
-SYSTEM_PROMPT = """You are a senior research analyst producing executive briefings from video transcripts. Your summaries must be so insight-dense that reading them is genuinely more efficient than watching the video.
+def load_system_prompt(path="prompt.txt"):
+    """Load system prompt from prompt.txt. Falls back to a basic default if file is missing."""
+    if os.path.exists(path):
+        with open(path) as f:
+            return f.read().strip()
+    return "You are a video summarizer. Given a transcript, produce a JSON object with \"summary\" (string) and \"sections\" (array of {timestamp, title, description}). Output ONLY valid JSON."
 
-Output a single JSON object with exactly two fields. No markdown, no code fences — ONLY valid JSON.
-
-### "summary" (string)
-Write 3-5 sentences as an executive briefing in two short paragraphs. NOT a book report.
-- Paragraph 1: The single most important claim or finding, stated as a direct assertion. Follow with the strongest evidence — include specific names, numbers, studies, or data points from the transcript. Never write vague placeholders like "specific genes" or "certain studies" — use the actual terms mentioned.
-- Paragraph 2: The "so what" — actionable implications, who this affects, and why it matters now. When listing practical recommendations, briefly distinguish between those with strong human evidence and those based on animal studies or the speaker's personal practice.
-
-### "sections" (array of objects)
-Each object has "timestamp" (M:SS or MM:SS), "title" (5-10 words), and "description" (2-4 sentences).
-
-Rules:
-1. Create 5-15 sections scaled to video length.
-2. Prioritize by insight value, not equal time. A 30-second breakthrough claim deserves a section; a 5-minute tangent may not. Merge or omit filler segments.
-3. Titles must name the INSIGHT, not the topic. Write "Fasting triggers cellular repair via autophagy" not "Discussion of fasting." Titles must not overstate — if the speaker says "reversed aging markers," do not write "doubled lifespan."
-4. Every description must include at least one of: a specific claim with evidence, a data point, an actionable recommendation, a named example, a direct quote in quotation marks, or a surprising/contrarian take.
-5. When the speaker references specific genes, compounds, researchers, tools, or studies by name, always include those names — never use vague references.
-
-Content type adaptation (auto-detect):
-- Interview/Podcast: Lead with the guest's strongest claims. Capture disagreements between speakers. Preserve memorable phrasing in quotes.
-- Tutorial: Name specific tools, versions, settings, commands. Flag common mistakes warned about.
-- Lecture/Analysis: Trace the logical chain from evidence to conclusion. Capture frameworks or mental models introduced.
-- News/Commentary: Separate reported facts from interpretation. Capture predictions with stated timeframes.
-
-Quality check before output: Could someone who never watched this video make a specific decision, take concrete action, or accurately brief a colleague based solely on your summary? If not, replace vague language with specifics from the transcript."""
+SYSTEM_PROMPT = load_system_prompt()
 
 def parse_json_response(text):
     """Parse JSON from LLM response, stripping markdown fences if present."""
