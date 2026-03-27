@@ -191,17 +191,63 @@ def fetch_latest_videos(channel_id, api_key=None, max_results=2, channel_name=""
 # --- Transcript ---
 
 def fetch_transcript(video_id):
-    from youtube_transcript_api import YouTubeTranscriptApi
-    ytt = YouTubeTranscriptApi()
-    transcript = ytt.fetch(video_id, languages=["en"])
+    # Method 1: YouTube captions (fast, no download)
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+        ytt = YouTubeTranscriptApi()
+        transcript = ytt.fetch(video_id, languages=["en"])
+        lines = []
+        for snippet in transcript:
+            m, s = divmod(int(snippet.start), 60)
+            text = snippet.text.strip()
+            if text:
+                lines.append(f"[{m}:{s:02d}] {text}")
+        if lines:
+            return "\n".join(lines)
+    except Exception:
+        pass
+
+    # Method 2: Whisper local transcription (fallback for no-caption videos)
+    print("      No captions available, using Whisper transcription...")
+    return _whisper_transcribe(video_id)
+
+
+def _whisper_transcribe(video_id):
+    """Download audio and transcribe with OpenAI Whisper locally."""
+    import tempfile
+    import subprocess
+
+    try:
+        import whisper
+    except ImportError:
+        raise Exception("Whisper not installed. Run: pip install openai-whisper")
+
+    url = f"https://www.youtube.com/watch?v={video_id}"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        audio_path = os.path.join(tmpdir, "audio.mp3")
+        # Download audio only
+        result = subprocess.run(
+            ["yt-dlp", "-x", "--audio-format", "mp3", "-o", audio_path, url],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            raise Exception(f"Failed to download audio: {result.stderr[:200]}")
+
+        # Transcribe
+        model = whisper.load_model("base")
+        result = model.transcribe(audio_path)
+
     lines = []
-    for snippet in transcript:
-        m, s = divmod(int(snippet.start), 60)
-        text = snippet.text.strip()
+    for seg in result["segments"]:
+        m, s = divmod(int(seg["start"]), 60)
+        text = seg["text"].strip()
         if text:
             lines.append(f"[{m}:{s:02d}] {text}")
+
     if not lines:
-        raise Exception(f"Empty transcript for {video_id}")
+        raise Exception(f"Whisper produced empty transcript for {video_id}")
+
     return "\n".join(lines)
 
 # --- LLM Summarization ---
