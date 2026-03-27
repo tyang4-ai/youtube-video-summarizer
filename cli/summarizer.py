@@ -58,6 +58,10 @@ def resolve_channel_id(url_or_id, api_key=None):
         name = _get_channel_name(cid, api_key) or cid
         return cid, name
 
+    # Bare @handle (e.g. "@Fireship") — treat as YouTube handle
+    if url_or_id.startswith("@"):
+        url_or_id = f"https://www.youtube.com/{url_or_id}"
+
     # /@handle or /c/name — extract the handle, then verify via API
     handle_match = re.search(r"youtube\.com/(@[\w.-]+|c/[\w.-]+)", url_or_id)
     if handle_match:
@@ -205,7 +209,7 @@ def fetch_transcript(video_id):
 def load_system_prompt(path="prompt.txt"):
     """Load system prompt from prompt.txt. Lines starting with ## are stripped. Falls back to a basic default if file is missing."""
     if os.path.exists(path):
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             lines = [line for line in f if not line.startswith("##")]
             return "\n".join(lines).strip()
     return "You are a video summarizer. Given a transcript, produce a JSON object with \"summary\" (string) and \"sections\" (array of {timestamp, title, description}). Output ONLY valid JSON."
